@@ -1,6 +1,7 @@
 // lib/pages/home_page.dart
 
 import 'package:flutter/material.dart';
+import 'adicionar.dart';
 
 // Por enquanto, vamos usar um 'dynamic' para a lista de filmes.
 // Em breve, vamos criar uma classe 'Filme' para organizar melhor.
@@ -155,7 +156,11 @@ class _HomePageState extends State<HomePage> {
       
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          print("Botão de adicionar pressionado!");
+          // 2. ALTERE A AÇÃO DO BOTÃO
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddMoviePage()),
+          );
         },
         backgroundColor: const Color(0xFFE7801A),
         child: const Icon(
