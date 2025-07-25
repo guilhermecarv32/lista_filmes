@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/filme.dart'; // Importe seu modelo
 
 enum FilterType { all, watched, unwatched }
+enum SortType { byDateAdded, byTitleAZ, byYear }
 
 class DatabaseHelper {
   
@@ -47,17 +48,17 @@ class DatabaseHelper {
 
   // --- Funções CRUD (Create, Read, Update, Delete) ---
 
-  // --- FUNÇÃO getFilmes ATUALIZADA PARA BUSCA E FILTRO COMBINADOS ---
   Future<List<Filme>> getFilmes({
     FilterType filter = FilterType.all,
-    String? searchTerm, // Novo parâmetro para o termo de busca
+    String? searchTerm,
+    SortType sort = SortType.byDateAdded, // Novo parâmetro para ordenação
   }) async {
     final db = await instance.database;
     
     List<String> whereClauses = [];
     List<dynamic> whereArgs = [];
 
-    // Adiciona a cláusula de filtro de status (assistido/não assistido)
+    // Lógica de filtro (continua a mesma)
     if (filter == FilterType.watched) {
       whereClauses.add('isWatched = ?');
       whereArgs.add(1);
@@ -66,21 +67,34 @@ class DatabaseHelper {
       whereArgs.add(0);
     }
 
-    // Adiciona a cláusula de busca por texto, se houver
+    // Lógica de busca (continua a mesma)
     if (searchTerm != null && searchTerm.isNotEmpty) {
       whereClauses.add('title LIKE ?');
-      // Os '%' são curingas: busca por títulos que contenham o termo
       whereArgs.add('%$searchTerm%');
     }
 
-    // Junta as cláusulas com 'AND' se houver mais de uma
     String? finalWhere = whereClauses.isNotEmpty ? whereClauses.join(' AND ') : null;
+
+    // 2. LÓGICA PARA DEFINIR A CLÁUSULA ORDER BY
+    String orderBy;
+    switch (sort) {
+      case SortType.byTitleAZ:
+        orderBy = 'title ASC'; // ASC = Ascendente (A-Z)
+        break;
+      case SortType.byYear:
+        orderBy = 'year DESC'; // DESC = Descendente (ano mais novo primeiro)
+        break;
+      case SortType.byDateAdded:
+      default:
+        orderBy = 'id DESC'; // id DESC = Mais recente adicionado primeiro
+        break;
+    }
 
     final maps = await db.query(
       'filmes',
       where: finalWhere,
       whereArgs: whereArgs,
-      orderBy: 'id DESC',
+      orderBy: orderBy, // Usa a cláusula de ordenação dinâmica
     );
     
     return List.generate(maps.length, (i) {

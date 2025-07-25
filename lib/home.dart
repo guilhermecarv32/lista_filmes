@@ -17,6 +17,7 @@ class _HomePageState extends State<HomePage> {
   // CORREÇÃO 1: A lista de filmes foi movida para DENTRO da classe de estado.
   late Future<List<Filme>> _filmesFuture;
   FilterType _currentFilter = FilterType.all;
+  SortType _currentSort = SortType.byDateAdded;
   bool _isFilterPanelVisible = false;
   final _searchController = TextEditingController();
   
@@ -40,51 +41,56 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // --- ATUALIZADO: Agora passa o filtro E o termo da busca para o banco ---
+  // --- ATUALIZADO: Agora passa o filtro, busca E ordenação para o banco ---
   void _refreshFilmesList() {
-    // Adicionamos um pequeno atraso (debounce) para não pesquisar a cada letra digitada,
-    // mas sim quando o usuário para de digitar.
-    // No nosso caso, como a busca é manual (botão), isso não é estritamente necessário,
-    // mas é uma boa prática se fôssemos fazer a busca automática.
-    // Apenas chamando setState já é o suficiente por causa do listener.
     setState(() {
       _filmesFuture = DatabaseHelper.instance.getFilmes(
         filter: _currentFilter,
         searchTerm: _searchController.text,
+        sort: _currentSort, // Passa a ordenação atual
       );
     });
   }
 
-  // --- FUNÇÃO ATUALIZADA PARA CONSTRUIR O PAINEL COM ANIMAÇÃO ---
+  // --- ATUALIZADO: O painel agora inclui as opções de ordenação ---
   Widget _buildAnimatedFilterPanel() {
-    // A altura aproximada do nosso painel. Usado para a posição inicial fora da tela.
-    const double panelHeight = 110.0;
+    const double panelHeight = 240.0; // Aumentamos a altura para caber tudo
 
     return AnimatedPositioned(
-      duration: const Duration(milliseconds: 300), // Duração da animação de deslize
-      curve: Curves.easeInOut, // Curva de animação para um movimento mais natural
-      top: _isFilterPanelVisible ? 0 : -panelHeight, // Anima a posição 'top'
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      top: _isFilterPanelVisible ? 0 : -panelHeight,
       left: 0,
       right: 0,
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 300), // Duração da animação de opacidade
-        opacity: _isFilterPanelVisible ? 1.0 : 0.0, // Anima a opacidade
+        duration: const Duration(milliseconds: 300),
+        opacity: _isFilterPanelVisible ? 1.0 : 0.0,
         child: Material(
           elevation: 4.0,
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+            height: panelHeight,
+            padding: const EdgeInsets.all(16.0),
             color: const Color(0xFF2d2f31),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Filtrar por:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8.0),
                 Wrap(
                   spacing: 8.0,
                   children: [
                     FilterChip(label: const Text('Todos'), selected: _currentFilter == FilterType.all, onSelected: (s) => _applyFilter(FilterType.all)),
                     FilterChip(label: const Text('Assistidos'), selected: _currentFilter == FilterType.watched, onSelected: (s) => _applyFilter(FilterType.watched)),
                     FilterChip(label: const Text('Não Assistidos'), selected: _currentFilter == FilterType.unwatched, onSelected: (s) => _applyFilter(FilterType.unwatched)),
+                  ],
+                ),
+                const Divider(height: 24, color: Colors.white24),
+                const Text('Ordenar por:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                Wrap(
+                  spacing: 8.0,
+                  children: [
+                    ChoiceChip(label: const Text('Data de Adição'), selected: _currentSort == SortType.byDateAdded, onSelected: (s) => _applySort(SortType.byDateAdded)),
+                    ChoiceChip(label: const Text('Título (A-Z)'), selected: _currentSort == SortType.byTitleAZ, onSelected: (s) => _applySort(SortType.byTitleAZ)),
+                    ChoiceChip(label: const Text('Ano (Mais Recente)'), selected: _currentSort == SortType.byYear, onSelected: (s) => _applySort(SortType.byYear)),
                   ],
                 ),
               ],
@@ -95,11 +101,18 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- NOVO: Função para aplicar o filtro e esconder o painel ---
   void _applyFilter(FilterType filter) {
     setState(() {
       _currentFilter = filter;
-      _isFilterPanelVisible = false;
+      // Não fechamos mais o painel aqui, para o usuário poder escolher a ordenação
+    });
+    _refreshFilmesList();
+  }
+  
+  // --- NOVO: Função para aplicar a ordenação ---
+  void _applySort(SortType sort) {
+    setState(() {
+      _currentSort = sort;
     });
     _refreshFilmesList();
   }
@@ -364,7 +377,11 @@ class _HomePageState extends State<HomePage> {
             ),
 
           // CAMADA 3: O painel de filtros animado
-          _buildAnimatedFilterPanel(),
+          IgnorePointer(
+            // 'ignoring' será 'true' quando o painel NÃO estiver visível
+            ignoring: !_isFilterPanelVisible,
+            child: _buildAnimatedFilterPanel(),
+          ),
         ],
       ),
 
