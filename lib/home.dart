@@ -192,10 +192,25 @@ class _HomePageState extends State<HomePage> {
 
   // 2. NOVA FUNÇÃO PARA NAVEGAR E EDITAR
   void _navigateAndEditMovie(Filme filme) async {
-    final filmeAtualizado = await Navigator.push<Filme>(context, MaterialPageRoute(builder: (context) => EditMoviePage(filme: filme)));
-    if (filmeAtualizado != null) {
-      await DatabaseHelper.instance.updateFilme(filmeAtualizado);
-      _refreshFilmesList(); // Recarrega a lista do banco
+    // A chamada para a EditMoviePage agora pode retornar dois tipos de dados:
+    // um objeto Filme (se editou) ou uma String (se excluiu)
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => EditMoviePage(filme: filme)),
+    );
+
+    // Verifica o tipo de resultado que voltou
+    if (result != null) {
+      if (result == 'delete') {
+        // Se o resultado for a string 'delete', exclua o filme
+        await DatabaseHelper.instance.deleteFilme(filme.id!);
+      } else if (result is Filme) {
+        // Se for um objeto Filme, atualize-o
+        await DatabaseHelper.instance.updateFilme(result);
+      }
+      
+      // Em ambos os casos (exclusão ou edição), recarregue a lista
+      _refreshFilmesList();
     }
   }
 

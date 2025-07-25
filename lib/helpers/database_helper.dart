@@ -70,7 +70,7 @@ class DatabaseHelper {
     );
   }
   
-  // (Opcional) DELETAR UM FILME
+  // DELETAR UM FILME
   Future<int> deleteFilme(int id) async {
     final db = await instance.database;
     return await db.delete(

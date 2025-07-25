@@ -87,6 +87,35 @@ class _EditMoviePageState extends State<EditMoviePage> {
       style: const TextStyle(color: Colors.white),
     );
   }
+  
+  void _showDeleteConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1B1C1D),
+          title: const Text('Confirmar Exclusão', style: TextStyle(color: Colors.white)),
+          content: const Text('Tem certeza de que deseja excluir este filme? Esta ação não pode ser desfeita.', style: TextStyle(color: Colors.white70)),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+              onPressed: () {
+                Navigator.of(context).pop(); // Fecha o diálogo
+              },
+            ),
+            TextButton(
+              child: const Text('Excluir', style: TextStyle(color: Colors.redAccent)),
+              onPressed: () {
+                // Devolve um resultado especial para a HomePage saber que deve excluir
+                Navigator.of(context).pop('delete'); 
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -98,6 +127,13 @@ class _EditMoviePageState extends State<EditMoviePage> {
         backgroundColor: const Color(0xFF1B1C1D),
         elevation: 0,
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            onPressed: _showDeleteConfirmationDialog,
+            tooltip: 'Excluir Filme',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
