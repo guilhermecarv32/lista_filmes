@@ -10,33 +10,32 @@ class AddMoviePage extends StatefulWidget {
 }
 
 class _AddMoviePageState extends State<AddMoviePage> {
-  // Controladores para pegar o texto dos campos
   final _titleController = TextEditingController();
   final _yearController = TextEditingController();
-  final _posterUrlController = TextEditingController();
 
-  // Chave para o formulário, útil para validação futura
+  // Chave para o formulário, agora será usada para validação.
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
-    // Limpar os controladores quando a tela for fechada para liberar memória
     _titleController.dispose();
     _yearController.dispose();
-    _posterUrlController.dispose();
     super.dispose();
   }
 
-  // Função para criar os campos de texto com estilo padronizado
   Widget _buildTextField({
     required TextEditingController controller,
     required String labelText,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
+    // NOVO: Adicionamos um parâmetro opcional para o validador
+    String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      // NOVO: Atribuímos o validador ao campo de texto
+      validator: validator,
       decoration: InputDecoration(
         labelText: labelText,
         labelStyle: const TextStyle(color: Colors.white70),
@@ -55,9 +54,17 @@ class _AddMoviePageState extends State<AddMoviePage> {
           borderRadius: BorderRadius.circular(12.0),
           borderSide: const BorderSide(color: Color(0xFFE7801A)),
         ),
+        // Estilo para a mensagem de erro
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: const BorderSide(color: Colors.redAccent),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+        ),
       ),
       style: const TextStyle(color: Colors.white),
-      // Adicionaremos validação aqui no futuro
     );
   }
 
@@ -66,14 +73,12 @@ class _AddMoviePageState extends State<AddMoviePage> {
     return Scaffold(
       backgroundColor: const Color(0xFF1B1C1D),
       appBar: AppBar(
-        // O Flutter adiciona o botão de voltar automaticamente
         title: const Text('Adicionar Filme'),
-        backgroundColor: const Color(0xFF1B1C1D), // Mesma cor do fundo
-        elevation: 0, // Sem sombra na appbar
+        backgroundColor: const Color(0xFF1B1C1D),
+        elevation: 0,
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        // Permite rolar a tela se o teclado cobrir os campos
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
@@ -81,33 +86,44 @@ class _AddMoviePageState extends State<AddMoviePage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 20),
+              // Campo de Título com o validador
               _buildTextField(
                 controller: _titleController,
                 labelText: 'Título',
                 icon: Icons.title,
+                // NOVO: Lógica de validação para o título
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'O título é obrigatório.';
+                  }
+                  return null; // Retornar null significa que o campo é válido
+                },
               ),
               const SizedBox(height: 20),
+              // Outros campos não têm validador, pois não são obrigatórios
               _buildTextField(
                 controller: _yearController,
                 labelText: 'Ano de Lançamento',
                 icon: Icons.calendar_today,
                 keyboardType: TextInputType.number,
               ),
-              const SizedBox(height: 20),
-              _buildTextField(
-                controller: _posterUrlController,
-                labelText: 'URL do Pôster',
-                icon: Icons.link,
-              ),
               const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: () {
-                  // Lógica para salvar o filme virá aqui
-                  final title = _titleController.text;
-                  final year = _yearController.text;
-                  print('Salvando filme: $title ($year)');
-                  // Fechar a tela após salvar
-                  Navigator.pop(context);
+                  // NOVO: Adicionamos a verificação do formulário
+                  // O '!' garante ao Dart que _formKey.currentState não será nulo aqui.
+                  if (_formKey.currentState!.validate()) {
+                    // Se o formulário for válido, execute o código de salvar.
+                    final title = _titleController.text;
+                    final year = _yearController.text;
+                    print('Formulário válido! Salvando filme: $title ($year)');
+                    
+                    // Fecha a tela após salvar
+                    Navigator.pop(context);
+                  } else {
+                    // Se o formulário for inválido, a mensagem de erro já apareceu na tela.
+                    print('Formulário inválido!');
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE7801A),
