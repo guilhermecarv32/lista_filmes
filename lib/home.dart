@@ -16,6 +16,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   // CORREÇÃO 1: A lista de filmes foi movida para DENTRO da classe de estado.
   late Future<List<Filme>> _filmesFuture;
+  FilterType _currentFilter = FilterType.all;
 
   @override
   void initState() {
@@ -26,8 +27,58 @@ class _HomePageState extends State<HomePage> {
   // Função para (re)carregar a lista de filmes do banco de dados
   void _refreshFilmesList() {
     setState(() {
-      _filmesFuture = DatabaseHelper.instance.getFilmes();
+      _filmesFuture = DatabaseHelper.instance.getFilmes(filter: _currentFilter);
     });
+  }
+
+  // --- NOVO: Função que constrói e exibe o menu de filtros ---
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF2d2f31), // Cor de fundo do menu
+      builder: (context) {
+        // Usamos um StatefulBuilder para que possamos atualizar o estado dos botões DENTRO do menu
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Wrap( // Wrap permite que os botões quebrem a linha se não couberem
+                spacing: 8.0,
+                children: [
+                  FilterChip(
+                    label: const Text('Todos'),
+                    selected: _currentFilter == FilterType.all,
+                    onSelected: (selected) {
+                      setModalState(() { _currentFilter = FilterType.all; });
+                      _refreshFilmesList();
+                      Navigator.pop(context); // Fecha o menu
+                    },
+                  ),
+                  FilterChip(
+                    label: const Text('Assistidos'),
+                    selected: _currentFilter == FilterType.watched,
+                    onSelected: (selected) {
+                      setModalState(() { _currentFilter = FilterType.watched; });
+                      _refreshFilmesList();
+                      Navigator.pop(context);
+                    },
+                  ),
+                  FilterChip(
+                    label: const Text('Não Assistidos'),
+                    selected: _currentFilter == FilterType.unwatched,
+                    onSelected: (selected) {
+                      setModalState(() { _currentFilter = FilterType.unwatched; });
+                      _refreshFilmesList();
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   // --- WIDGET NOVO: BARRA DE PESQUISA ---
@@ -64,12 +115,13 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const SizedBox(width: 8),
+          // --- ATUALIZADO: Botão de Filtro agora chama a função do menu ---
           Material(
             color: Colors.white.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12.0),
             child: IconButton(
               icon: const Icon(Icons.filter_list, color: Colors.white70),
-              onPressed: () { print('Botão de filtro pressionado!'); },
+              onPressed: _showFilterSheet, // Chama a nova função
               tooltip: 'Filtros',
             ),
           ),

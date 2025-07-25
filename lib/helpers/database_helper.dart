@@ -6,7 +6,10 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/filme.dart'; // Importe seu modelo
 
+enum FilterType { all, watched, unwatched }
+
 class DatabaseHelper {
+  
   // Padrão Singleton: garante que teremos apenas uma instância do banco de dados
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
   static Database? _database;
@@ -44,10 +47,24 @@ class DatabaseHelper {
 
   // --- Funções CRUD (Create, Read, Update, Delete) ---
 
-  // LER TODOS OS FILMES
-  Future<List<Filme>> getFilmes() async {
+// 2. ATUALIZAMOS A FUNÇÃO getFilmes PARA ACEITAR UM FILTRO
+  Future<List<Filme>> getFilmes({FilterType filter = FilterType.all}) async {
     final db = await instance.database;
-    final maps = await db.query('filmes', orderBy: 'id DESC'); // Ordena pelos mais recentes
+    List<Map<String, dynamic>> maps;
+
+    switch (filter) {
+      case FilterType.watched:
+        maps = await db.query('filmes', where: 'isWatched = ?', whereArgs: [1], orderBy: 'id DESC');
+        break;
+      case FilterType.unwatched:
+        maps = await db.query('filmes', where: 'isWatched = ?', whereArgs: [0], orderBy: 'id DESC');
+        break;
+      case FilterType.all:
+      default:
+        maps = await db.query('filmes', orderBy: 'id DESC');
+        break;
+    }
+    
     return List.generate(maps.length, (i) {
       return Filme.fromMap(maps[i]);
     });
