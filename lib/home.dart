@@ -17,6 +17,8 @@ class _HomePageState extends State<HomePage> {
   // CORREÇÃO 1: A lista de filmes foi movida para DENTRO da classe de estado.
   late Future<List<Filme>> _filmesFuture;
   FilterType _currentFilter = FilterType.all;
+  bool _isFilterPanelVisible = false;
+  
 
   @override
   void initState() {
@@ -31,54 +33,59 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // --- NOVO: Função que constrói e exibe o menu de filtros ---
-  void _showFilterSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF2d2f31), // Cor de fundo do menu
-      builder: (context) {
-        // Usamos um StatefulBuilder para que possamos atualizar o estado dos botões DENTRO do menu
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Wrap( // Wrap permite que os botões quebrem a linha se não couberem
-                spacing: 8.0,
-                children: [
-                  FilterChip(
-                    label: const Text('Todos'),
-                    selected: _currentFilter == FilterType.all,
-                    onSelected: (selected) {
-                      setModalState(() { _currentFilter = FilterType.all; });
-                      _refreshFilmesList();
-                      Navigator.pop(context); // Fecha o menu
-                    },
-                  ),
-                  FilterChip(
-                    label: const Text('Assistidos'),
-                    selected: _currentFilter == FilterType.watched,
-                    onSelected: (selected) {
-                      setModalState(() { _currentFilter = FilterType.watched; });
-                      _refreshFilmesList();
-                      Navigator.pop(context);
-                    },
-                  ),
-                  FilterChip(
-                    label: const Text('Não Assistidos'),
-                    selected: _currentFilter == FilterType.unwatched,
-                    onSelected: (selected) {
-                      setModalState(() { _currentFilter = FilterType.unwatched; });
-                      _refreshFilmesList();
-                      Navigator.pop(context);
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+  // --- FUNÇÃO ATUALIZADA PARA CONSTRUIR O PAINEL COM ANIMAÇÃO ---
+  Widget _buildAnimatedFilterPanel() {
+    // A altura aproximada do nosso painel. Usado para a posição inicial fora da tela.
+    const double panelHeight = 110.0;
+
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 300), // Duração da animação de deslize
+      curve: Curves.easeInOut, // Curva de animação para um movimento mais natural
+      top: _isFilterPanelVisible ? 0 : -panelHeight, // Anima a posição 'top'
+      left: 0,
+      right: 0,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 300), // Duração da animação de opacidade
+        opacity: _isFilterPanelVisible ? 1.0 : 0.0, // Anima a opacidade
+        child: Material(
+          elevation: 4.0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+            color: const Color(0xFF2d2f31),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Filtrar por:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8.0),
+                Wrap(
+                  spacing: 8.0,
+                  children: [
+                    FilterChip(label: const Text('Todos'), selected: _currentFilter == FilterType.all, onSelected: (s) => _applyFilter(FilterType.all)),
+                    FilterChip(label: const Text('Assistidos'), selected: _currentFilter == FilterType.watched, onSelected: (s) => _applyFilter(FilterType.watched)),
+                    FilterChip(label: const Text('Não Assistidos'), selected: _currentFilter == FilterType.unwatched, onSelected: (s) => _applyFilter(FilterType.unwatched)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
+  }
+
+  // --- NOVO: Função para aplicar o filtro e esconder o painel ---
+  void _applyFilter(FilterType filter) {
+    setState(() {
+      _currentFilter = filter;
+      _isFilterPanelVisible = false;
+    });
+    _refreshFilmesList();
+  }
+
+  void _toggleFilterPanel() {
+    setState(() {
+      _isFilterPanelVisible = !_isFilterPanelVisible;
+    });
   }
 
   // --- WIDGET NOVO: BARRA DE PESQUISA ---
@@ -121,7 +128,7 @@ class _HomePageState extends State<HomePage> {
             borderRadius: BorderRadius.circular(12.0),
             child: IconButton(
               icon: const Icon(Icons.filter_list, color: Colors.white70),
-              onPressed: _showFilterSheet, // Chama a nova função
+              onPressed: _toggleFilterPanel, // Chama a função de toggle
               tooltip: 'Filtros',
             ),
           ),
@@ -275,28 +282,44 @@ class _HomePageState extends State<HomePage> {
         centerTitle: true,
         title: const Text('Meus Filmes', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          _buildSearchBar(),
-          Expanded(
-            child: FutureBuilder<List<Filme>>(
-              future: _filmesFuture,
-              builder: (context, snapshot) {
-                // Enquanto os dados estão carregando, mostre um spinner
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                // Se não houver dados ou a lista estiver vazia, mostre a tela de vazio
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return _buildEmptyState();
-                }
-                // Se houver dados, construa a lista
-                return _buildMoviesList(snapshot.data!);
-              },
-            ),
+          // CAMADA 1: Conteúdo Principal (pesquisa e lista)
+          Column(
+            children: [
+              _buildSearchBar(), // Seu widget de barra de pesquisa
+              Expanded(
+                child: FutureBuilder<List<Filme>>(
+                  future: _filmesFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return _buildEmptyState();
+                    }
+                    return _buildMoviesList(snapshot.data!);
+                  },
+                ),
+              ),
+            ],
           ),
+
+           // --- NOVO: CAMADA 2: Fundo semitransparente ("Backdrop") ---
+          // Aparece quando o painel de filtro está visível para dar foco e permitir o fechamento
+          if (_isFilterPanelVisible)
+            GestureDetector(
+              onTap: _toggleFilterPanel, // Tocar no fundo fecha o painel
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+              ),
+            ),
+
+          // CAMADA 3: O painel de filtros animado
+          _buildAnimatedFilterPanel(),
         ],
       ),
+
       floatingActionButton: FloatingActionButton(
         // CORREÇÃO 2: Ação do botão agora chama a função correta.
         onPressed: _navigateAndAddMovie,
