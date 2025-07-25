@@ -88,8 +88,9 @@ class _EditMoviePageState extends State<EditMoviePage> {
     );
   }
   
-  void _showDeleteConfirmationDialog() {
-    showDialog(
+  void _showDeleteConfirmationDialog() async { // 1. A função agora é async
+    // 2. Esperamos o resultado do diálogo
+    final result = await showDialog<String>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -100,13 +101,13 @@ class _EditMoviePageState extends State<EditMoviePage> {
             TextButton(
               child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
               onPressed: () {
-                Navigator.of(context).pop(); // Fecha o diálogo
+                Navigator.of(context).pop(); // Apenas fecha o diálogo, sem resultado
               },
             ),
             TextButton(
               child: const Text('Excluir', style: TextStyle(color: Colors.redAccent)),
               onPressed: () {
-                // Devolve um resultado especial para a HomePage saber que deve excluir
+                // Fecha o diálogo e retorna o resultado 'delete'
                 Navigator.of(context).pop('delete'); 
               },
             ),
@@ -114,6 +115,16 @@ class _EditMoviePageState extends State<EditMoviePage> {
         );
       },
     );
+
+    // 3. Se o resultado for 'delete', aí sim fechamos a tela de edição
+    if (result == 'delete') {
+      // Usamos um segundo Navigator.pop para fechar a EditMoviePage e enviar 
+      // o sinal 'delete' de volta para a HomePage.
+      // O 'mounted' checa se o widget ainda está na tela, uma boa prática.
+      if (mounted) {
+        Navigator.of(context).pop('delete');
+      }
+    }
   }
 
 
