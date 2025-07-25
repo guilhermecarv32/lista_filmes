@@ -18,12 +18,15 @@ class _EditMoviePageState extends State<EditMoviePage> {
   final _yearController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
+  late bool _isWatched;
+
   @override
   void initState() {
     super.initState();
     // 2. PREENCHE OS CAMPOS COM OS DADOS DO FILME
     _titleController.text = widget.filme.title;
     _yearController.text = widget.filme.year;
+    _isWatched = widget.filme.isWatched;
   }
 
   @override
@@ -48,13 +51,38 @@ class _EditMoviePageState extends State<EditMoviePage> {
       decoration: InputDecoration(
         labelText: labelText,
         labelStyle: const TextStyle(color: Colors.white70),
-        prefixIcon: Icon(icon, color: Colors.white70),
+
+        prefixIcon: Icon(
+          icon, color: Colors.white70
+          ),
         filled: true,
         fillColor: Colors.white.withOpacity(0.1),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: const BorderSide(color: Color(0xFFE7801A))),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: const BorderSide(color: Colors.redAccent)),
-        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: const BorderSide(color: Colors.redAccent, width: 2)),
+
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0), 
+          borderSide: BorderSide.none
+          ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: const BorderSide(
+            color: Color(0xFFE7801A)
+            )
+          ),
+
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0), 
+          borderSide: const BorderSide(
+            color: Colors.redAccent
+            )
+          ),
+
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0), 
+          borderSide: const BorderSide(
+            color: Colors.redAccent, width: 2
+            )
+          ),
       ),
       style: const TextStyle(color: Colors.white),
     );
@@ -97,17 +125,33 @@ class _EditMoviePageState extends State<EditMoviePage> {
                 icon: Icons.calendar_today,
                 keyboardType: TextInputType.number,
               ),
+
+              const SizedBox(height: 20),
+              SwitchListTile(
+                title: const Text('Assistido?', style: TextStyle(color: Colors.white)),
+                value: _isWatched,
+                onChanged: (bool value) {
+                  setState(() {
+                    _isWatched = value;
+                  });
+                },
+                activeColor: const Color(0xFFE7801A),
+                tileColor: Colors.white.withOpacity(0.1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+              ),
+
               const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    // 4. CRIA O OBJETO ATUALIZADO
+                    // ATUALIZA O OBJETO USANDO O NOVO VALOR DE _isWatched
                     final filmeAtualizado = Filme(
                       title: _titleController.text,
                       year: _yearController.text,
+                      isWatched: _isWatched, // Usa o valor do Switch
                     );
-                    
-                    // DEVOLVE O OBJETO ATUALIZADO PARA A TELA ANTERIOR
                     Navigator.pop(context, filmeAtualizado);
                   }
                 },

@@ -80,7 +80,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // A função _buildMoviesList agora tem a chamada para a edição no onTap
+  // --- FUNÇÃO ATUALIZADA PARA CONSTRUIR A LISTA COM BORDA E SELO DE CHECK ---
   Widget _buildMoviesList() {
     return ListView.builder(
       padding: const EdgeInsets.all(12.0),
@@ -90,14 +90,71 @@ class _HomePageState extends State<HomePage> {
         return Card(
           color: Colors.white.withOpacity(0.1),
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+          // 1. A BORDA VOLTOU!
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            // Adiciona a borda lateral se o filme foi assistido
+            side: filme.isWatched
+                ? const BorderSide(color: Colors.green, width: 2.0)
+                : BorderSide.none,
+          ),
           margin: const EdgeInsets.symmetric(vertical: 8.0),
           child: ListTile(
             contentPadding: const EdgeInsets.all(12.0),
-            leading: const CircleAvatar(backgroundColor: Color(0xFFE7801A), child: Icon(Icons.movie, color: Colors.white)),
-            title: Text(filme.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            
+            // 2. O SELO DE CHECK CONTINUA AQUI!
+            leading: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: filme.isWatched 
+                      ? Colors.green 
+                      : const Color(0xFFE7801A),
+                  child: const Icon(Icons.movie, color: Colors.white),
+                ),
+                if (filme.isWatched)
+                  Positioned(
+                    bottom: -2,
+                    right: -2,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF1B1C1D),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            
+            // O resto do ListTile continua o mesmo
+            title: Text(
+              filme.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             subtitle: Text(filme.year, style: const TextStyle(color: Colors.white70)),
-            // 1. AÇÃO DE TOQUE PARA EDITAR
+            trailing: IconButton(
+              iconSize: 33.0,
+              icon: Icon(
+                filme.isWatched ? Icons.toggle_on : Icons.toggle_off_outlined,
+                color: Colors.white70,
+              ),
+              onPressed: () {
+                setState(() {
+                  _listaDeFilmes[index] = filme.copyWith(isWatched: !filme.isWatched);
+                });
+              },
+              tooltip: 'Marcar como assistido',
+            ),
             onTap: () {
               _navigateAndEditMovie(filme, index);
             },
