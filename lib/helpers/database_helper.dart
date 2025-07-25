@@ -47,23 +47,41 @@ class DatabaseHelper {
 
   // --- Funções CRUD (Create, Read, Update, Delete) ---
 
-// 2. ATUALIZAMOS A FUNÇÃO getFilmes PARA ACEITAR UM FILTRO
-  Future<List<Filme>> getFilmes({FilterType filter = FilterType.all}) async {
+  // --- FUNÇÃO getFilmes ATUALIZADA PARA BUSCA E FILTRO COMBINADOS ---
+  Future<List<Filme>> getFilmes({
+    FilterType filter = FilterType.all,
+    String? searchTerm, // Novo parâmetro para o termo de busca
+  }) async {
     final db = await instance.database;
-    List<Map<String, dynamic>> maps;
+    
+    List<String> whereClauses = [];
+    List<dynamic> whereArgs = [];
 
-    switch (filter) {
-      case FilterType.watched:
-        maps = await db.query('filmes', where: 'isWatched = ?', whereArgs: [1], orderBy: 'id DESC');
-        break;
-      case FilterType.unwatched:
-        maps = await db.query('filmes', where: 'isWatched = ?', whereArgs: [0], orderBy: 'id DESC');
-        break;
-      case FilterType.all:
-      default:
-        maps = await db.query('filmes', orderBy: 'id DESC');
-        break;
+    // Adiciona a cláusula de filtro de status (assistido/não assistido)
+    if (filter == FilterType.watched) {
+      whereClauses.add('isWatched = ?');
+      whereArgs.add(1);
+    } else if (filter == FilterType.unwatched) {
+      whereClauses.add('isWatched = ?');
+      whereArgs.add(0);
     }
+
+    // Adiciona a cláusula de busca por texto, se houver
+    if (searchTerm != null && searchTerm.isNotEmpty) {
+      whereClauses.add('title LIKE ?');
+      // Os '%' são curingas: busca por títulos que contenham o termo
+      whereArgs.add('%$searchTerm%');
+    }
+
+    // Junta as cláusulas com 'AND' se houver mais de uma
+    String? finalWhere = whereClauses.isNotEmpty ? whereClauses.join(' AND ') : null;
+
+    final maps = await db.query(
+      'filmes',
+      where: finalWhere,
+      whereArgs: whereArgs,
+      orderBy: 'id DESC',
+    );
     
     return List.generate(maps.length, (i) {
       return Filme.fromMap(maps[i]);

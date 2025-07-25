@@ -18,6 +18,7 @@ class _HomePageState extends State<HomePage> {
   late Future<List<Filme>> _filmesFuture;
   FilterType _currentFilter = FilterType.all;
   bool _isFilterPanelVisible = false;
+  final _searchController = TextEditingController();
   
 
   @override
@@ -26,10 +27,20 @@ class _HomePageState extends State<HomePage> {
     _refreshFilmesList(); // Carrega os filmes ao iniciar a tela
   }
 
-  // Função para (re)carregar a lista de filmes do banco de dados
+  @override
+  void dispose() {
+    // É importante limpar o controller para liberar memória
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // --- ATUALIZADO: Agora passa o filtro E o termo da busca para o banco ---
   void _refreshFilmesList() {
     setState(() {
-      _filmesFuture = DatabaseHelper.instance.getFilmes(filter: _currentFilter);
+      _filmesFuture = DatabaseHelper.instance.getFilmes(
+        filter: _currentFilter,
+        searchTerm: _searchController.text,
+      );
     });
   }
 
@@ -96,6 +107,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           Expanded(
             child: TextField(
+              controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Pesquisar...',
                 hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
@@ -109,6 +121,7 @@ class _HomePageState extends State<HomePage> {
                 contentPadding: EdgeInsets.zero,
               ),
               style: const TextStyle(color: Colors.white),
+              onSubmitted: (_) => _refreshFilmesList(),
             ),
           ),
           const SizedBox(width: 10),
@@ -117,7 +130,7 @@ class _HomePageState extends State<HomePage> {
             borderRadius: BorderRadius.circular(12.0),
             child: IconButton(
               icon: const Icon(Icons.send, color: Colors.white70),
-              onPressed: () { print('Botão de pesquisar pressionado!'); },
+              onPressed: _refreshFilmesList,
               tooltip: 'Pesquisar',
             ),
           ),
