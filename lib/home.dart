@@ -24,7 +24,13 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _refreshFilmesList(); // Carrega os filmes ao iniciar a tela
+    // 1. ADICIONA O LISTENER
+    // Esta função será chamada toda vez que o texto no campo de busca mudar.
+    // O setState vazio força a reconstrução do widget para mostrar/esconder o ícone 'X'.
+    _searchController.addListener(() {
+      setState(() {});
+    });
+    _refreshFilmesList();
   }
 
   @override
@@ -36,6 +42,11 @@ class _HomePageState extends State<HomePage> {
 
   // --- ATUALIZADO: Agora passa o filtro E o termo da busca para o banco ---
   void _refreshFilmesList() {
+    // Adicionamos um pequeno atraso (debounce) para não pesquisar a cada letra digitada,
+    // mas sim quando o usuário para de digitar.
+    // No nosso caso, como a busca é manual (botão), isso não é estritamente necessário,
+    // mas é uma boa prática se fôssemos fazer a busca automática.
+    // Apenas chamando setState já é o suficiente por causa do listener.
     setState(() {
       _filmesFuture = DatabaseHelper.instance.getFilmes(
         filter: _currentFilter,
@@ -119,6 +130,18 @@ class _HomePageState extends State<HomePage> {
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: EdgeInsets.zero,
+                // 2. ADICIONA O ÍCONE DE LIMPAR (X)
+                // Ele só aparece se o campo de texto não estiver vazio
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.white70),
+                        onPressed: () {
+                          // 3. AÇÃO DE LIMPEZA
+                          _searchController.clear(); // Limpa o texto
+                          _refreshFilmesList();      // Atualiza a lista
+                        },
+                      )
+                    : null, // Se estiver vazio, não mostra nada
               ),
               style: const TextStyle(color: Colors.white),
               onSubmitted: (_) => _refreshFilmesList(),
@@ -302,10 +325,21 @@ class _HomePageState extends State<HomePage> {
             children: [
               _buildSearchBar(), // Seu widget de barra de pesquisa
               Expanded(
+                child: RefreshIndicator(
+                // 2. A cor do ícone de carregamento
+                color: const Color(0xFFE7801A),
+                backgroundColor: const Color(0xFF2d2f31),
+                // 3. A ação que será executada ao puxar
+                onRefresh: () async {
+                  // Apenas chamamos nossa função de recarregar a lista
+                  _refreshFilmesList();
+                  // Precisamos esperar o Future ser completado
+                  await _filmesFuture;
+                },
                 child: FutureBuilder<List<Filme>>(
                   future: _filmesFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
+                    if (snapshot.connectionState == ConnectionState.waiting && snapshot.data == null) {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -315,8 +349,9 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
 
            // --- NOVO: CAMADA 2: Fundo semitransparente ("Backdrop") ---
           // Aparece quando o painel de filtro está visível para dar foco e permitir o fechamento
