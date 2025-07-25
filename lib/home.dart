@@ -1,7 +1,8 @@
 // lib/pages/home_page.dart
 
 import 'package:flutter/material.dart';
-import 'adicionar.dart'; // Mantive o nome 'adicionar.dart' que você está usando
+import 'adicionar.dart';
+import 'editar.dart';
 import 'models/filme.dart';
 
 class HomePage extends StatefulWidget {
@@ -79,7 +80,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // FUNÇÃO ATUALIZADA PARA CONSTRUIR A LISTA DE CARDS DE FILMES
+  // A função _buildMoviesList agora tem a chamada para a edição no onTap
   Widget _buildMoviesList() {
     return ListView.builder(
       padding: const EdgeInsets.all(12.0),
@@ -93,14 +94,13 @@ class _HomePageState extends State<HomePage> {
           margin: const EdgeInsets.symmetric(vertical: 8.0),
           child: ListTile(
             contentPadding: const EdgeInsets.all(12.0),
-            // Como não tem pôster, podemos usar um ícone no lugar
-            leading: const CircleAvatar(
-              backgroundColor: Color(0xFFE7801A),
-              child: Icon(Icons.movie, color: Colors.white),
-            ),
+            leading: const CircleAvatar(backgroundColor: Color(0xFFE7801A), child: Icon(Icons.movie, color: Colors.white)),
             title: Text(filme.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             subtitle: Text(filme.year, style: const TextStyle(color: Colors.white70)),
-            onTap: () {},
+            // 1. AÇÃO DE TOQUE PARA EDITAR
+            onTap: () {
+              _navigateAndEditMovie(filme, index);
+            },
           ),
         );
       },
@@ -117,6 +117,21 @@ class _HomePageState extends State<HomePage> {
     if (novoFilme != null) {
       setState(() {
         _listaDeFilmes.add(novoFilme);
+      });
+    }
+  }
+
+  // 2. NOVA FUNÇÃO PARA NAVEGAR E EDITAR
+  void _navigateAndEditMovie(Filme filme, int index) async {
+    final filmeAtualizado = await Navigator.push<Filme>(
+      context,
+      MaterialPageRoute(builder: (context) => EditMoviePage(filme: filme)),
+    );
+
+    if (filmeAtualizado != null) {
+      setState(() {
+        // Substitui o filme na posição 'index' pelo filme atualizado
+        _listaDeFilmes[index] = filmeAtualizado;
       });
     }
   }
