@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 
+import 'models/filme.dart';
+
 class AddMoviePage extends StatefulWidget {
   const AddMoviePage({super.key});
 
@@ -110,19 +112,15 @@ class _AddMoviePageState extends State<AddMoviePage> {
               const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: () {
-                  // NOVO: Adicionamos a verificação do formulário
-                  // O '!' garante ao Dart que _formKey.currentState não será nulo aqui.
                   if (_formKey.currentState!.validate()) {
-                    // Se o formulário for válido, execute o código de salvar.
-                    final title = _titleController.text;
-                    final year = _yearController.text;
-                    print('Formulário válido! Salvando filme: $title ($year)');
+                    // 1. CRIA O OBJETO FILME COM OS DADOS DOS CAMPOS
+                    final novoFilme = Filme(
+                      title: _titleController.text,
+                      year: _yearController.text,
+                    );
                     
-                    // Fecha a tela após salvar
-                    Navigator.pop(context);
-                  } else {
-                    // Se o formulário for inválido, a mensagem de erro já apareceu na tela.
-                    print('Formulário inválido!');
+                    // 2. DEVOLVE O OBJETO PARA A TELA ANTERIOR
+                    Navigator.pop(context, novoFilme);
                   }
                 },
                 style: ElevatedButton.styleFrom(
