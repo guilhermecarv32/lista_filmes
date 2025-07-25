@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'adicionar.dart';
 import 'editar.dart';
+import 'helpers/database_helper.dart';
 import 'models/filme.dart';
 
 class HomePage extends StatefulWidget {
@@ -14,7 +15,20 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   // CORREÇÃO 1: A lista de filmes foi movida para DENTRO da classe de estado.
-  final List<Filme> _listaDeFilmes = [];
+  late Future<List<Filme>> _filmesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshFilmesList(); // Carrega os filmes ao iniciar a tela
+  }
+
+  // Função para (re)carregar a lista de filmes do banco de dados
+  void _refreshFilmesList() {
+    setState(() {
+      _filmesFuture = DatabaseHelper.instance.getFilmes();
+    });
+  }
 
   // --- WIDGET NOVO: BARRA DE PESQUISA ---
   Widget _buildSearchBar() {
@@ -81,12 +95,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   // --- FUNÇÃO ATUALIZADA PARA CONSTRUIR A LISTA COM BORDA E SELO DE CHECK ---
-  Widget _buildMoviesList() {
+  Widget _buildMoviesList(List<Filme> filmes) {
     return ListView.builder(
       padding: const EdgeInsets.all(12.0),
-      itemCount: _listaDeFilmes.length,
+      itemCount: filmes.length,
       itemBuilder: (context, index) {
-        final filme = _listaDeFilmes[index];
+        final filme = filmes[index];
         return Card(
           color: Colors.white.withOpacity(0.1),
           elevation: 0,
@@ -148,15 +162,18 @@ class _HomePageState extends State<HomePage> {
                 filme.isWatched ? Icons.toggle_on : Icons.toggle_off_outlined,
                 color: Colors.white70,
               ),
-              onPressed: () {
-                setState(() {
-                  _listaDeFilmes[index] = filme.copyWith(isWatched: !filme.isWatched);
-                });
-              },
+              onPressed: () async { // 1. A função agora é async
+                    // 2. Cria uma cópia do filme com o status trocado
+                    final filmeAtualizado = filme.copyWith(isWatched: !filme.isWatched);
+                    // 3. Pede ao banco de dados para salvar a alteração
+                    await DatabaseHelper.instance.updateFilme(filmeAtualizado);
+                    // 4. Recarrega a lista da tela para mostrar a mudança
+                    _refreshFilmesList();
+                  },
               tooltip: 'Marcar como assistido',
             ),
             onTap: () {
-              _navigateAndEditMovie(filme, index);
+              _navigateAndEditMovie(filme);
             },
           ),
         );
@@ -166,30 +183,19 @@ class _HomePageState extends State<HomePage> {
 
   // FUNÇÃO PARA NAVEGAR E ADICIONAR UM FILME
   void _navigateAndAddMovie() async {
-    final novoFilme = await Navigator.push<Filme>(
-      context,
-      MaterialPageRoute(builder: (context) => const AddMoviePage()),
-    );
-
-    if (novoFilme != null) {
-      setState(() {
-        _listaDeFilmes.add(novoFilme);
-      });
+    final novoFilmeSemId = await Navigator.push<Filme>(context, MaterialPageRoute(builder: (context) => const AddMoviePage()));
+    if (novoFilmeSemId != null) {
+      await DatabaseHelper.instance.addFilme(novoFilmeSemId);
+      _refreshFilmesList(); // Recarrega a lista do banco
     }
   }
 
   // 2. NOVA FUNÇÃO PARA NAVEGAR E EDITAR
-  void _navigateAndEditMovie(Filme filme, int index) async {
-    final filmeAtualizado = await Navigator.push<Filme>(
-      context,
-      MaterialPageRoute(builder: (context) => EditMoviePage(filme: filme)),
-    );
-
+  void _navigateAndEditMovie(Filme filme) async {
+    final filmeAtualizado = await Navigator.push<Filme>(context, MaterialPageRoute(builder: (context) => EditMoviePage(filme: filme)));
     if (filmeAtualizado != null) {
-      setState(() {
-        // Substitui o filme na posição 'index' pelo filme atualizado
-        _listaDeFilmes[index] = filmeAtualizado;
-      });
+      await DatabaseHelper.instance.updateFilme(filmeAtualizado);
+      _refreshFilmesList(); // Recarrega a lista do banco
     }
   }
 
@@ -206,9 +212,21 @@ class _HomePageState extends State<HomePage> {
         children: [
           _buildSearchBar(),
           Expanded(
-            child: _listaDeFilmes.isEmpty
-                ? _buildEmptyState()
-                : _buildMoviesList(),
+            child: FutureBuilder<List<Filme>>(
+              future: _filmesFuture,
+              builder: (context, snapshot) {
+                // Enquanto os dados estão carregando, mostre um spinner
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                // Se não houver dados ou a lista estiver vazia, mostre a tela de vazio
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return _buildEmptyState();
+                }
+                // Se houver dados, construa a lista
+                return _buildMoviesList(snapshot.data!);
+              },
+            ),
           ),
         ],
       ),

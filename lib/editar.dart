@@ -148,9 +148,10 @@ class _EditMoviePageState extends State<EditMoviePage> {
                   if (_formKey.currentState!.validate()) {
                     // ATUALIZA O OBJETO USANDO O NOVO VALOR DE _isWatched
                     final filmeAtualizado = Filme(
+                      id: widget.filme.id, // <-- A LINHA CRUCIAL QUE FALTAVA
                       title: _titleController.text,
                       year: _yearController.text,
-                      isWatched: _isWatched, // Usa o valor do Switch
+                      isWatched: _isWatched,
                     );
                     Navigator.pop(context, filmeAtualizado);
                   }
